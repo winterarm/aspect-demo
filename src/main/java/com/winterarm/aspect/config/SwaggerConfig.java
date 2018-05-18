@@ -13,7 +13,7 @@ import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 /**
- * Created by oyqh on 2017-5-23.
+ * Created by winterarm on 2018-5-10.
  */
 @EnableWebMvc
 @Configuration
@@ -26,7 +26,7 @@ public class SwaggerConfig {
         return new Docket(DocumentationType.SWAGGER_2)
                 .apiInfo(apiInfo())
                 .select()
-                .apis(RequestHandlerSelectors.basePackage("com.winterarm.springbootdemo"))
+                .apis(RequestHandlerSelectors.basePackage("com.winterarm.aspect"))
                 .paths(PathSelectors.any())
                 .build();
     }

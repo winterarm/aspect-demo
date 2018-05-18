@@ -3,16 +3,16 @@ package com.winterarm.aspect.aspect;
 import com.alibaba.fastjson.JSONObject;
 import com.winterarm.aspect.annotation.SystemControllerLog;
 import com.winterarm.aspect.annotation.SystemServiceLog;
-import com.winterarm.aspect.service.ILogService;
 import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import springfox.documentation.annotations.Cacheable;
 
-import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -25,11 +25,7 @@ import java.lang.reflect.Method;
 @Component
 public class SystemLogAspect {
 
-    //注入Service用于把日志保存数据库    
-    @Resource
-    private ILogService logService;
-
-    //本地异常日志记录对象    
+    //本地异常日志记录对象
     private static final Logger logger = LoggerFactory.getLogger(SystemLogAspect.class);
 
     //Service层切点    
@@ -37,7 +33,7 @@ public class SystemLogAspect {
     public void serviceAspect() {
     }
 
-    //Controller层切点    
+    //Controller层切点   可以基于类引用路径
     @Pointcut("@annotation(com.winterarm.aspect.annotation.SystemControllerLog)")
     public void controllerAspect() {
     }
@@ -47,34 +43,22 @@ public class SystemLogAspect {
      *
      * @param joinPoint 切点
      */
+    @Around("controllerAspect()")
+    public void doAround(ProceedingJoinPoint joinPoint) throws Throwable {
+        logger.info("Before Controller Invoke params{}", joinPoint.getArgs());
+        Object o = joinPoint.proceed();
+        logger.info("After Returning Controller return data {}", o);
+
+    }
+
     @Before("controllerAspect()")
     public void doBefore(JoinPoint joinPoint) {
-
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
-        HttpSession session = request.getSession();
-        //读取session中的用户    
-        //User user = (User) session.getAttribute(WebConstants.CURRENT_USER);
-        //请求的IP
-        String ip = request.getRemoteAddr();
-
-        try {
-            //========控制台输出=========
-            logger.info("=====前置通知开始=====");
-            logger.info("请求方法:" + (joinPoint.getTarget().getClass().getName() + "." + joinPoint.getSignature().getName() + "()"));
-            logger.info("请求IP:" + ip);
-            logger.info("请求方法描述:{}", getControllerMethodDescription(joinPoint));
-            logger.info("请求方法详情:{}", joinPoint.getTarget().getClass().getName() + "." + joinPoint.getSignature().getName() + "()");
-            logger.info("=====前置通知结束=====");
-        } catch (Exception e) {
-            //记录本地异常日志
-            logger.error("==前置通知异常==");
-            logger.error("异常信息", e.getMessage(), e);
-        }
+        logger.info("Before Controller Invoke params{}", joinPoint.getArgs());
     }
 
     @AfterReturning(pointcut = "controllerAspect()", returning = "o")
     public void afterReturn(Object o) {
-        logger.info("Controller return data {}", o);
+        logger.info("After Returning Controller return data {}", o);
     }
 
     /**
@@ -117,20 +101,26 @@ public class SystemLogAspect {
      * @return 方法描述
      * @throws Exception
      */
-    public static String getServiceMthodDescription(JoinPoint joinPoint) throws Exception {
-        String targetName = joinPoint.getTarget().getClass().getName();
-        String methodName = joinPoint.getSignature().getName();
+    public static String getMthodDescription(JoinPoint joinPoint) throws Exception {
+        String targetName = joinPoint.getTarget()
+                                     .getClass()
+                                     .getName();
+        String methodName = joinPoint.getSignature()
+                                     .getName();
         Object[] arguments = joinPoint.getArgs();
         Class targetClass = Class.forName(targetName);
         Method[] methods = targetClass.getMethods();
         String description = "";
         for (Method method : methods) {
-            if (method.getName().equals(methodName)) {
+            if (method.getName()
+                      .equals(methodName)) {
                 method.getReturnType();
                 Class[] clazzs = method.getParameterTypes();
                 if (clazzs.length == arguments.length) {
-                    description = method.getAnnotation(SystemServiceLog.class)
-                                        .description();
+                    SystemServiceLog systemControllerLog = method.getAnnotation(SystemServiceLog.class);
+                    if (null != systemControllerLog) {
+                        description = systemControllerLog.description();
+                    }
                     break;
                 }
             }
@@ -156,11 +146,12 @@ public class SystemLogAspect {
         Method[] methods = targetClass.getMethods();
         String description = "";
         for (Method method : methods) {
-            if (method.getName().equals(methodName)) {
+            if (method.getName()
+                      .equals(methodName)) {
                 Class[] clazzs = method.getParameterTypes();
                 if (clazzs.length == arguments.length) {
                     SystemControllerLog systemControllerLog = method.getAnnotation(SystemControllerLog.class);
-                    if(null != systemControllerLog){
+                    if (null != systemControllerLog) {
                         description = systemControllerLog.description();
                     }
                     break;
